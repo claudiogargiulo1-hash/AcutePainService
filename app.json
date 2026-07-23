@@ -2,7 +2,7 @@
   "expo": {
     "name": "AcutePainService",
     "slug": "AcutePainService",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -16,8 +16,7 @@
       "bundleIdentifier": "it.ior.aps-manager",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      },
-      "buildNumber": "2"
+      }
     },
     "android": {
       "adaptiveIcon": {
