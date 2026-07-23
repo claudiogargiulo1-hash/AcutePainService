@@ -1008,6 +1008,15 @@ export default function CPSPScreen({ route, navigation }: any) {
   const phq9Score = phq9Answers.reduce((a, b) => a + b, 0);
   const gad7Score = gad7Answers.reduce((a, b) => a + b, 0);
 
+  const resolveScoreErrorMessage = (error: any, data: any): string => {
+    console.log('compute-cpsp-risk error:', error, data);
+    const status = error?.context?.status ?? error?.status;
+    if (status === 401) {
+      return 'Sessione scaduta: effettua di nuovo il login.';
+    }
+    return 'Calcolo non riuscito: verifica la connessione e riprova.';
+  };
+
   const handleCalculate = async () => {
     if (!surgeryValue) return Alert.alert('Attenzione', 'Seleziona il tipo di intervento');
     if (nrsPreop === null) return Alert.alert('Attenzione', 'Inserisci il dolore NRS preoperatorio');
@@ -1033,7 +1042,7 @@ export default function CPSPScreen({ route, navigation }: any) {
     });
     setCalculating(false);
     if (error || data?.error) {
-      setScoreError((error?.message ?? data?.error ?? 'Errore di rete').toString());
+      setScoreError(resolveScoreErrorMessage(error, data));
     } else {
       setResult({ pct: data.pct, level: data.level as RiskLevel, version: data.version });
     }
@@ -1059,7 +1068,7 @@ export default function CPSPScreen({ route, navigation }: any) {
     });
     setCalculating(false);
     if (error || data?.error) {
-      const msg = (error?.message ?? data?.error ?? 'Errore di rete').toString();
+      const msg = resolveScoreErrorMessage(error, data);
       setScoreError(msg);
       Alert.alert('Errore calcolo', msg);
       return;
