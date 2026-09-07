@@ -14,6 +14,7 @@ import { LineChart } from 'react-native-chart-kit';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Colors, Spacing, Radius, Shadow, getNrsColor, getNrsBackground } from '../utils/theme';
+import { PatientAuditSection } from '../components/AuditEntryList';
 import { Patient, Intervention, NrsMeasurement } from '../types/database';
 import { format, parseISO } from 'date-fns';
 
@@ -40,7 +41,7 @@ export default function PatientDetailScreen({ route, navigation }: any) {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [measurements, setMeasurements] = useState<NrsMeasurement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'info' | 'nrs' | 'interventions'>('nrs');
+  const [activeTab, setActiveTab] = useState<'info' | 'nrs' | 'interventions' | 'audit'>('nrs');
 
   const [tenantId, setTenantId] = useState<string | null>(null);
 
@@ -318,13 +319,13 @@ export default function PatientDetailScreen({ route, navigation }: any) {
 
       {/* Tabs */}
       <View style={styles.tabs}>
-        {(['nrs', 'info', 'interventions'] as const).map(tab => (
+        {(profile?.role === 'admin' ? (['nrs', 'info', 'interventions', 'audit'] as const) : (['nrs', 'info', 'interventions'] as const)).map(tab => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
             onPress={() => setActiveTab(tab)}>
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab === 'nrs' ? '📊 NRS' : tab === 'info' ? '👤 Info' : '🔧 Interventi'}
+              {tab === 'nrs' ? '📊 NRS' : tab === 'info' ? '👤 Info' : tab === 'interventions' ? '🔧 Interventi' : '📜 Cronologia'}
             </Text>
           </TouchableOpacity>
         ))}
@@ -561,6 +562,10 @@ export default function PatientDetailScreen({ route, navigation }: any) {
               interventions.map(i => <InterventionCard key={i.id} intervention={i} t={t} canDelete={canDeleteIntervention} onDelete={deleteIntervention} navigation={navigation} patientId={patientId} />)
             )}
           </>
+        )}
+
+        {activeTab === 'audit' && profile?.role === 'admin' && (
+          <PatientAuditSection patientId={patientId} />
         )}
       </ScrollView>
     </SafeAreaView>

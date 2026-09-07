@@ -158,6 +158,11 @@ export default function ProfileScreen({ navigation }: any) {
               onPress={() => navigation.navigate('Settings')}>
               <Text style={[styles.exportText, { color: '#064F4F' }]}>⚙️ Impostazioni</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.exportBtn, { backgroundColor: '#1A5F7A20' }]}
+              onPress={() => navigation.navigate('AuditLog')}>
+              <Text style={[styles.exportText, { color: '#1A5F7A' }]}>📜 Cronologia modifiche</Text>
+            </TouchableOpacity>
           </View>
         )}
 

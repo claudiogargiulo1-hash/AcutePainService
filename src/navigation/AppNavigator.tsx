@@ -23,6 +23,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import OpioidScreen from '../screens/OpioidScreen';
 import UsersScreen from '../screens/UsersScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import AuditLogScreen from '../screens/AuditLogScreen';
 import CPSPScreen from '../screens/CPSPScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -125,6 +126,7 @@ function AppStack({ navigationRef }: { navigationRef: React.RefObject<Navigation
             <Stack.Screen name="Opioid" component={OpioidScreen} />
             <Stack.Screen name="Users" component={UsersScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="AuditLog" component={AuditLogScreen} />
             <Stack.Screen name="CPSP" component={CPSPScreen} />
           </>
         )}
