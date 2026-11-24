@@ -46,7 +46,7 @@ const PCS_ITEMS = [
   'Mi chiedo se non mi stia capitando qualcosa di grave',      // 12 Magnification
 ];
 
-// PASS-20 – Pain Anxiety Symptoms Scale (20 item, 0–4, max normalizzato 100)
+// PASS-20 – Pain Anxiety Symptoms Scale (McCracken & Dhingra 2002): 20 item, 0–5, totale 0–100
 const PASS_ITEMS = [
   'Quando avverto dolore, ho paura che succeda qualcosa di brutto',
   'Il dolore mi spaventa molto',
@@ -228,6 +228,7 @@ const CATEGORY_BG: Record<string, string> = {
   'Priorità':          '#FFEBEE',
   'Counseling':        '#F3E5F5',
   'Nota critica':      '#FFF3E0',
+  'Gabapentinoidi':    '#FFEBEE',
 };
 
 const LEVEL_COLOR: Record<string, string> = {
@@ -247,70 +248,59 @@ function computeRecs(
 ): Rec[] {
   const recs: Rec[] = [];
 
+  // Allineate a PROSPECT (ESRA), Carley et al. Anesthesiology 2021 (aggiornamento revisione Cochrane),
+  // Doleman et al. BJA 2023 (network meta-analisi), SSAPM Swiss Med Wkly 2026. Livello C = bassa confidenza.
+  const BASE: Rec = { icon: '✅', category: 'Farmacologico', text: 'Analgesia multimodale di base: paracetamolo + FANS o COX-2 inibitore pre/intraop e postop (salvo controindicazioni); oppioidi solo come rescue', source: 'PROSPECT (ESRA)', level: 'A' };
+  const REGIONAL: Rec = { icon: '🦷', category: 'Locoregionale', text: 'Anestesia regionale procedura-specifica secondo PROSPECT: anca → fascia iliaca sovrainguinale o PENG preop; ginocchio → ACB + LIA; cuffia dei rotatori → interscalenico; femore prossimale → femorale o fascia iliaca (vedi bundle)', source: 'PROSPECT ESRA 2019–2026', level: 'A' };
+  const NO_GABA: Rec = { icon: '⛔', category: 'Gabapentinoidi', text: 'Pregabalin/gabapentin NON raccomandati di routine per prevenire la CPSP: nessun effetto sulla prevalenza del dolore a 3 mesi (RR 0,88; IC 0,70–1,10) e sconsigliati da PROSPECT in THA, TKA, colonna, ernia, mammella e toracotomia', source: 'Carley et al., Anesthesiology 2021; PROSPECT', level: 'A' };
+  const KETAMINE: Rec = { icon: '💉', category: 'Intraoperatorio', text: 'Considerare ketamina EV a basse dosi intraoperatoria, soprattutto se dolore cronico o oppioidi preoperatori. Effetto sulla CPSP incerto: nessun effetto a 6 mesi nell\'aggiornamento Cochrane; possibile riduzione a ≤6 mesi nella network meta-analisi (OR 0,64), bassa confidenza', source: 'Carley 2021; Doleman BJA 2023; PROSPECT colonna', level: 'C' };
+  const LIDOCAINE: Rec = { icon: '💉', category: 'Intraoperatorio', text: 'Considerare lidocaina EV intraoperatoria: possibile riduzione della CPSP a ≤6 mesi (OR 0,32), bassa confidenza. Non raccomandata da PROSPECT per il dolore acuto in colonna e mammella', source: 'Doleman et al., BJA 2023', level: 'C' };
   if (level === 'basso') {
-    recs.push(
-      { icon: '✅', category: 'Farmacologico', text: 'Analgesia multimodale standard ERAS: paracetamolo 1g x4/die + FANS/COX-2 inibitore + oppioide rescue PRN', source: 'APS Guidelines 2016, PROSPECT 2023', level: 'A' },
-      { icon: '📄', category: 'Educazione',    text: 'Informazione preoperatoria strutturata (pain neuroscience education breve, 1 sessione)', source: 'APS Guidelines 2016', level: 'B' },
-      { icon: '📅', category: 'Follow-up',     text: 'Rivalutazione NRS a 1 mese dalla dimissione', source: 'Expert consensus', level: 'expert' },
-    );
+    recs.push(BASE);
+    recs.push({ icon: '📄', category: 'Educazione', text: 'Informazione preoperatoria: opzioni analgesiche, effetti collaterali, obiettivi e aspettative realistiche, come verrà valutato il dolore', source: 'SSAPM 2026 (consenso)', level: 'expert' });
+    recs.push({ icon: '📅', category: 'Follow-up', text: 'Rivalutazione NRS a 1 mese dalla dimissione', source: 'Expert consensus', level: 'expert' });
   } else if (level === 'moderato') {
-    recs.push(
-      { icon: '💊', category: 'Farmacologico', text: 'Pregabalin 75-150mg x2/die: iniziare 2h prima dell\'intervento, continuare 7-14 giorni post-op (OR riduzione CPSP 0.09 vs placebo)', source: 'Cochrane meta-analisi 2023', level: 'A' },
-      { icon: '💊', category: 'Farmacologico', text: 'In alternativa: Gabapentin 300mg x3/die perioperatorio (evidenza simile al pregabalin)', source: 'Cochrane 2023', level: 'A' },
-      { icon: '🦷', category: 'Locoregionale', text: 'Anestesia regionale tecnica-specifica: PENG+ACB per anca/ginocchio, ESPB per colonna/spalla, TAP block per addome', source: 'PROSPECT Guidelines 2023', level: 'A' },
-      { icon: '📋', category: 'TPS',           text: 'Segnalazione al Transitional Pain Service per follow-up strutturato post-dimissione', source: 'Expert consensus', level: 'expert' },
-      { icon: '📅', category: 'Follow-up',     text: 'Follow-up a 3 mesi con NRS + BPI', source: 'IASP 2021', level: 'B' },
-    );
+    recs.push(BASE, REGIONAL, NO_GABA);
+    recs.push({ icon: '📋', category: 'TPS', text: 'Paziente a rischio: segnalazione al Transitional Pain Service per follow-up strutturato', source: 'SSAPM 2026 (consenso)', level: 'expert' });
+    recs.push({ icon: '📅', category: 'Follow-up', text: 'Follow-up a 3 mesi con NRS + BPI (definizione ICD-11 di CPSP: dolore ≥3 mesi)', source: 'ICD-11 / IASP', level: 'expert' });
   } else if (level === 'alto') {
-    recs.push(
-      { icon: '💉', category: 'Intraoperatorio', text: 'Ketamina EV: 0.3-0.5mg/kg bolo all\'induzione + infusione 0.1-0.2mg/kg/h fino a 24h post-op (unico farmaco con evidenza Cochrane per riduzione CPSP)', source: 'ROCKet Trial 2024, Cochrane Review', level: 'B' },
-      { icon: '💊', category: 'Farmacologico',   text: 'Lidocaina EV intraoperatoria: 1.5mg/kg bolo + 2mg/kg/h infusione (migliore evidenza per riduzione CPSP a 6 mesi in network meta-analisi)', source: 'BJA Systematic Review 2023', level: 'A' },
-      { icon: '💊', category: 'Farmacologico',   text: 'Pregabalin 150mg x2/die perioperatorio (dose piena)', source: 'Cochrane 2023', level: 'A' },
-      { icon: '🏥', category: 'TPS',             text: 'Presa in carico TPS obbligatoria con piano dimissione strutturato', source: 'Expert consensus', level: 'expert' },
-      { icon: '👨‍⚕️', category: 'Consulenza',    text: 'Consulenza algologica preoperatoria obbligatoria', source: 'Expert consensus', level: 'expert' },
-      { icon: '📅', category: 'Follow-up',       text: 'Follow-up strutturato a 3, 6, 12 mesi con BPI + DN4 + EQ-5D', source: 'IASP 2021', level: 'B' },
-    );
+    recs.push(BASE, REGIONAL, KETAMINE, LIDOCAINE, NO_GABA);
+    recs.push({ icon: '🏥', category: 'TPS', text: 'Presa in carico TPS con piano di dimissione strutturato e comunicazione al medico curante', source: 'SSAPM 2026 (consenso)', level: 'expert' });
+    recs.push({ icon: '👨‍⚕️', category: 'Consulenza', text: 'Consulenza algologica preoperatoria', source: 'Expert consensus', level: 'expert' });
+    recs.push({ icon: '📅', category: 'Follow-up', text: '3, 6, 12 mesi con BPI + DN4 + EQ-5D', source: 'Expert consensus', level: 'expert' });
   } else {
-    recs.push(
-      { icon: '🏥', category: 'Team',             text: 'Approccio multidisciplinare obbligatorio: anestesista algologo + psicologo/psichiatra + fisioterapista', source: 'IASP 2021', level: 'B' },
-      { icon: '⚠️', category: 'Nota critica',     text: 'DULOXETINA: due RCT su TKA/THA (60mg/die) non hanno dimostrato riduzione CPSP come strategia routinaria. Indicata SOLO se CSI≥40 (sensitizzazione centrale documentata)', source: 'Int J Mol Sci 2024', level: 'B' },
-      { icon: '💉', category: 'Intraoperatorio',  text: 'Ketamina EV + Lidocaina EV in combinazione (sinergia, evidenza emergente)', source: 'BJA 2023', level: 'B' },
-      { icon: '💉', category: 'Intraoperatorio',  text: 'Considerare Metadone intraoperatorio 0.1-0.2mg/kg (emerging evidence, azione NMDA)', source: 'Expert consensus', level: 'expert' },
-      { icon: '📞', category: 'Centro del dolore',text: 'Riferimento obbligatorio al Centro del Dolore Cronico PRIMA dell\'intervento', source: 'IASP 2021', level: 'B' },
-      { icon: '📅', category: 'Follow-up',        text: 'Follow-up intensivo a 1, 3, 6, 12 mesi con team multidisciplinare', source: 'Expert consensus', level: 'expert' },
-    );
+    recs.push(BASE, REGIONAL);
+    recs.push({ icon: '🏥', category: 'Team', text: 'Approccio multidisciplinare: algologo, psicologo, fisioterapista e medico curante', source: 'SSAPM 2026 (consenso)', level: 'expert' });
+    recs.push(KETAMINE, LIDOCAINE, NO_GABA);
+    recs.push({ icon: '⚠️', category: 'Nota critica', text: 'Duloxetina non raccomandata di routine in perioperatorio (PROSPECT THA 2026 e mammella 2026): solo su indicazione specialistica', source: 'PROSPECT 2026', level: 'B' });
+    recs.push({ icon: '📞', category: 'Centro del dolore', text: 'Invio al Centro del Dolore prima dell\'intervento', source: 'Expert consensus', level: 'expert' });
+    recs.push({ icon: '📅', category: 'Follow-up', text: 'Follow-up intensivo a 1, 3, 6, 12 mesi con team multidisciplinare', source: 'Expert consensus', level: 'expert' });
   }
 
   if (pcsTotal >= 30) {
     recs.push(
-      { icon: '🧠', category: 'Psicologico', text: 'Pain Neuroscience Education (PNE) preoperatoria: 1-2 sessioni strutturate (forte evidenza in TKA/THA per riduzione catastrofizzazione)', source: 'Cochrane 2022, Lewis meta-analisi TKA', level: 'A' },
-      { icon: '🧠', category: 'Psicologico', text: 'CBT orientata al dolore (riduce PCS score, intensità dolore e disabilità)', source: 'Cochrane Review 2021', level: 'A' },
-      { icon: '📖', category: 'Educazione',  text: 'Fornire materiale psicoeducativo scritto validato sulla neuroscienza del dolore', source: 'Expert consensus', level: 'expert' },
+      { icon: '🧠', category: 'Psicologico', text: 'Catastrofizzazione elevata (fattore di rischio per CPSP): considerare intervento psicologico preoperatorio (educazione sul dolore, approccio cognitivo-comportamentale). Effetto sulla prevenzione della CPSP non ancora dimostrato', source: 'SSAPM 2026 (fattori di rischio)', level: 'C' },
+      { icon: '📖', category: 'Educazione', text: 'Materiale psicoeducativo scritto sul dolore postoperatorio e sulle aspettative', source: 'Expert consensus', level: 'expert' },
     );
   }
 
   if (passTotal >= 30) {
     recs.push(
-      { icon: '🤝', category: 'Psicologico', text: 'Valutazione ansiolitica strutturata preoperatoria con colloquio dedicato', source: 'BJA Consensus 2024', level: 'B' },
-      { icon: '💬', category: 'Counseling',  text: 'Counseling preoperatorio focalizzato sull\'ansia da dolore (2-3 sessioni)', source: 'APS Guidelines', level: 'B' },
-      { icon: '💊', category: 'Farmacologico', text: 'Considerare clonidina 0.1-0.2mg preoperatoria se ansia severa (effetto ansiolitico + analgesico preemptivo)', source: 'Expert consensus', level: 'expert' },
+      { icon: '🤝', category: 'Psicologico', text: 'Ansia da dolore elevata (fattore di rischio): colloquio preoperatorio dedicato e counseling sull\'ansia da dolore', source: 'SSAPM 2026 (fattori di rischio)', level: 'expert' },
     );
   }
 
   if (csiTotal >= 40) {
     recs.push(
-      { icon: '💊', category: 'Farmacologico', text: 'Pregabalin 75-150mg x2/die PRIORITARIO: target specifico sui canali calcio voltage-dipendenti della sensitizzazione centrale', source: 'IASP 2021', level: 'A' },
-      { icon: '💊', category: 'Farmacologico', text: 'Duloxetina 60mg/die perioperatoria: INDICATA in presenza di CSI≥40 come unica condizione con evidenza positiva (a differenza della chirurgia ortopedica routinaria)', source: 'IASP Fact Sheet 2021', level: 'B' },
-      { icon: '🔄', category: 'Multimodale',   text: 'Approccio multimodale obbligatorio, evitare strategia single-drug', source: 'APS Guidelines 2016', level: 'A' },
-      { icon: '🧠', category: 'Psicologico',   text: 'MBSR (Mindfulness-Based Stress Reduction) come complemento non farmacologico', source: 'Cochrane 2019', level: 'B' },
-      { icon: '⚠️', category: 'Approccio',     text: 'Sensibilità aumentata richiede titolazione analgesica più attenta intra e postoperatoria', source: 'Expert consensus', level: 'expert' },
+      { icon: '🔄', category: 'Multimodale', text: 'Possibile sensitizzazione centrale: approccio multimodale completo, preferire tecniche regionali, titolazione analgesica attenta intra e postoperatoria', source: 'PROSPECT; Expert consensus', level: 'expert' },
+      { icon: '👨‍⚕️', category: 'Consulenza', text: 'Valutazione algologica; gabapentinoidi e duloxetina non raccomandati di routine in perioperatorio', source: 'Carley 2021; PROSPECT 2026', level: 'B' },
     );
   }
 
   if (opioids === 'chronic') {
     recs.push(
       { icon: '🔄', category: 'Opioid management', text: 'Opioid rotation perioperatoria se possibile (ridurre tolleranza crociata)', source: 'Expert consensus', level: 'expert' },
-      { icon: '📉', category: 'Opioid management', text: 'Piano di taper strutturato post-operatorio con supporto algologico dedicato', source: 'APS Guidelines 2016', level: 'B' },
+      { icon: '📉', category: 'Opioid management', text: 'Evitare interruzioni e astinenza; tecniche regionali quando possibile; piano di scalaggio postoperatorio scritto per paziente e medico curante', source: 'SSAPM 2026 (consenso)', level: 'expert' },
       { icon: '👨‍⚕️', category: 'Consulenza',       text: 'Coinvolgimento obbligatorio algologo (OR=4.04 per CPSP in oppioidi cronici)', source: 'Letteratura CPSP', level: 'A' },
       { icon: '💊', category: 'Farmacologico',       text: 'Considerare buprenorfina SL/TDS come bridge perioperatorio (emerging evidence)', source: 'Expert consensus', level: 'expert' },
     );
@@ -349,67 +339,143 @@ function computeRecs(
 }
 
 // ─── PROSPECT BUNDLES ────────────────────────────────────────────────────────
-const PROSPECT_BUNDLES: Record<string, { title: string; source: string; items: { drug: string; dose: string; level: string }[] }> = {
-  THA: { title: 'THA – Artroprotesi Anca', source: 'PROSPECT 2022', items: [
-    { drug: 'Paracetamolo', dose: '1g x4/die EV/PO', level: 'A' },
-    { drug: 'Celecoxib 200mg x2/die', dose: 'preop + 5-7 gg', level: 'A' },
-    { drug: 'PENG block + ACB', dose: 'singolo shot / catetere', level: 'A' },
-    { drug: 'Desametasone 8-10mg EV', dose: 'induzione', level: 'A' },
-    { drug: 'Ketamina 0.3mg/kg EV', dose: 'bolo intraop', level: 'B' },
-  ]},
-  TKA: { title: 'TKA – Artroprotesi Ginocchio', source: 'PROSPECT 2023', items: [
-    { drug: 'Paracetamolo 1g x4/die', dose: 'EV/PO', level: 'A' },
-    { drug: 'Celecoxib 200mg x2/die', dose: 'preop + 7-14 gg', level: 'A' },
-    { drug: 'Adductor Canal Block + infiltrazione pericapsulare', dose: 'singolo shot', level: 'A' },
-    { drug: 'Desametasone 8-10mg EV', dose: 'induzione', level: 'A' },
-    { drug: 'Pregabalin 150mg x2', dose: 'solo se rischio CPSP alto', level: 'B' },
-  ]},
-  ARTR_GINOCCHIO: { title: 'Artroscopia Ginocchio', source: 'PROSPECT 2018', items: [
-    { drug: 'Paracetamolo 1g x4', dose: 'PO preop + 24h', level: 'A' },
-    { drug: 'Ketorolac 30mg EV', dose: 'intraop', level: 'A' },
-    { drug: 'Bupivacaina intra-articolare 0.25% 20ml', dose: 'fine procedura', level: 'A' },
-  ]},
-  ARTR_SPALLA: { title: 'Artroscopia Spalla', source: 'PROSPECT 2021', items: [
-    { drug: 'Paracetamolo 1g x4', dose: 'PO', level: 'A' },
-    { drug: 'Celecoxib 200mg x2', dose: '5 gg', level: 'A' },
-    { drug: 'ISB (interscalene block) ropivacaina 0.5% 20ml', dose: 'singolo shot', level: 'A' },
-  ]},
-  PROTESI_SPALLA: { title: 'Protesi Spalla', source: 'PROSPECT/Expert', items: [
-    { drug: 'Paracetamolo 1g x4', dose: 'PO', level: 'A' },
-    { drug: 'Celecoxib 200mg x2', dose: '5-7 gg', level: 'A' },
-    { drug: 'ISB continuo (ropivacaina 0.2%)', dose: 'infusione 48h', level: 'A' },
-    { drug: 'Ketamina 0.3mg/kg', dose: 'bolo intraop', level: 'B' },
-  ]},
-  VERTEBRALE_FUSIONE: { title: 'Fusione Vertebrale', source: 'PROSPECT 2021', items: [
-    { drug: 'Paracetamolo 1g x4', dose: 'EV/PO', level: 'A' },
-    { drug: 'FANS/COX-2 breve durata', dose: 'celecoxib 200mg x2', level: 'B' },
-    { drug: 'ESPB bilaterale (ropivacaina 0.25% 20ml/lato)', dose: '', level: 'B' },
-    { drug: 'Ketamina EV', dose: '0.3mg/kg + 0.1mg/kg/h infusione', level: 'A' },
-    { drug: 'Metadone 0.1-0.2mg/kg intraop', dose: 'emerging evidence', level: 'expert' },
-  ]},
-  VERTEBRALE_DECOMPRESSIONE: { title: 'Decompressione Vertebrale', source: 'PROSPECT 2021', items: [
-    { drug: 'Paracetamolo 1g x4', dose: 'EV/PO', level: 'A' },
-    { drug: 'Celecoxib 200mg x2', dose: '5 gg', level: 'A' },
-    { drug: 'ESPB (ropivacaina 0.25%)', dose: 'singolo shot', level: 'B' },
-    { drug: 'Ketamina 0.3mg/kg', dose: 'intraop', level: 'B' },
-  ]},
-  FRATTURA_INF: { title: 'Frattura Arto Inferiore', source: 'ESRA/Expert', items: [
-    { drug: 'Paracetamolo 1g x4', dose: 'EV', level: 'A' },
-    { drug: 'FNB / FICB / popliteal block (specifico per sede)', dose: '', level: 'A' },
-    { drug: 'Ketamina 0.3mg/kg', dose: 'intraop', level: 'B' },
-    { drug: 'Ketorolac 15-30mg EV breve durata', dose: 'cauto in fratture', level: 'B' },
-  ]},
-  FRATTURA_SUP: { title: 'Frattura Arto Superiore', source: 'ESRA/Expert', items: [
-    { drug: 'Paracetamolo 1g x4', dose: 'EV', level: 'A' },
-    { drug: 'Blocco plessico brachiale (ropivacaina 0.5%)', dose: '', level: 'A' },
-    { drug: 'Ketorolac 15mg EV', dose: 'intraop', level: 'B' },
-  ]},
-  ALTRO: { title: 'Procedura Ortopedica Generale', source: 'APS / PROSPECT', items: [
-    { drug: 'Paracetamolo 1g x4', dose: 'EV/PO', level: 'A' },
-    { drug: 'FANS/COX-2 (se non controindicati)', dose: '', level: 'A' },
-    { drug: 'Blocco locoregionale tecnica-specifico', dose: '—', level: 'A' },
-    { drug: 'Oppioide rescue PRN', dose: 'morfina/tramadolo', level: 'B' },
-  ]},
+// Anestesia regionale/neuroassiale: anesthesia_type può essere una lista separata da virgole (es. "Spinale,Locoregionale")
+function isRegionalAnesthesia(t?: string | null): boolean {
+  if (!t) return false;
+  return t.toLowerCase().split(',').map(x => x.trim()).some(x => ['spinale', 'epidurale', 'locoregionale', 'combinata spinale-epidurale'].includes(x));
+}
+
+// Functional Activity Score (Scott & McDonald 2008)
+const FAS_DESC: Record<string, string> = {
+  A: 'Nessuna limitazione: esegue l\'attività senza limitazioni dovute al dolore',
+  B: 'Limitazione lieve: esegue l\'attività ma con dolore moderato-severo',
+  C: 'Limitazione significativa: non riesce a completare l\'attività per dolore o effetti collaterali',
+};
+
+// Bundle PROSPECT (ESRA) — aggiornati a novembre 2026. Stesso testo in aps-web e AcutePainService.
+type ProspectBundle = { title: string; rec: string[]; notRec: string[]; note?: string; source: string };
+const PB_THA: ProspectBundle = {
+  title: 'Artroprotesi d\'anca (THA)',
+  rec: [
+    'Paracetamolo + FANS o COX-2 inibitore pre/intraop, proseguiti nel postop (salvo controindicazioni)',
+    'Desametasone EV dose singola fino a 10 mg',
+    'Blocco single-shot: fascia iliaca SOVRAINGUINALE (approccio posterolaterale) oppure PENG preoperatorio',
+    'LIA solo se i blocchi non sono fattibili o sono controindicati — non associarla ai blocchi',
+    'Morfina intratecale ≤0,1 mg solo con anestesia spinale e paziente ricoverato',
+    'Oppioidi solo come rescue',
+  ],
+  notRec: ['Fascia iliaca infrainguinale', 'PENG postoperatorio', 'ESP, quadrato dei lombi, plesso lombare/psoas', 'Gabapentinoidi', 'Duloxetina', 'Desametasone postop, metilprednisolone', 'Dexmedetomidina EV'],
+  source: 'PROSPECT THA 2026 — Carella et al., Anaesthesia 2026 (doi 10.1111/anae.70299)',
+};
+const PB_TKA: ProspectBundle = {
+  title: 'Artroprotesi di ginocchio (TKA)',
+  rec: [
+    'Paracetamolo + FANS o COX-2 inibitore pre/intraop e postop',
+    'ACB single-shot preoperatorio + LIA intraoperatoria (combinazione preferita)',
+    'Desametasone EV dose singola intraop (≥10 mg)',
+    'Morfina intratecale 100 µg solo se ricoverato, in spinale, e ACB + LIA non possibili',
+    'Oppioidi solo come rescue',
+  ],
+  notRec: ['Gabapentinoidi', 'Ketamina', 'Dexmedetomidina', 'Analgesia epidurale', 'Blocco femorale', 'Blocco sciatico', 'LIA continua / infusione intra-articolare'],
+  source: 'PROSPECT TKA — Lavand\'homme et al., Eur J Anaesthesiol 2022 (revisione 2014–2020)',
+};
+const PB_SPINE: ProspectBundle = {
+  title: 'Chirurgia spinale complessa (strumentata, ≥3 livelli, scoliosi)',
+  rec: [
+    'Paracetamolo + FANS o COX-2 inibitore pre/intraop e postop (FANS a basse dosi e breve durata: non compromettono la fusione)',
+    'Ketamina EV a basse dosi solo intraoperatoria, soprattutto se dolore cronico / uso di oppioidi — non proseguire nel postop',
+    'Epidurale postoperatoria con AL a bassa concentrazione, catetere posizionato dal chirurgo a vista — valutazione caso per caso',
+    'Oppioidi solo come rescue',
+  ],
+  notRec: ['Gabapentinoidi', 'Metadone EV', 'ESP block, TLIP block', 'Oppioidi intratecali', 'Infiltrazione della ferita', 'Desametasone / glucocorticoidi EV', 'Lidocaina, dexmedetomidina, magnesio EV'],
+  note: 'Morfina intratecale ed ESP block: non raccomandati da PROSPECT 2020 per evidenza procedura-specifica limitata. La morfina intratecale è invece raccomandata dall\'ERAS Society 2021 per la fusione lombare (evidenza alta, raccomandazione forte, dose non definita — Debono et al., Spine J 2021). Non esiste ancora un aggiornamento PROSPECT che includa gli studi successivi.',
+  source: 'PROSPECT chirurgia spinale complessa — Waelkens et al., Eur J Anaesthesiol 2021',
+};
+const PB_LAMINECTOMY: ProspectBundle = {
+  title: 'Laminectomia lombare 1–2 livelli',
+  rec: [
+    'Paracetamolo + FANS o COX-2 inibitore pre/intraop e postop',
+    'Instillazione o infiltrazione della ferita con AL prima della chiusura',
+    'Oppioidi solo come rescue',
+  ],
+  notRec: ['Gabapentinoidi e oppioidi intratecali (efficaci ma con rischi rilevanti)', 'Blocco paravertebrale', 'Infiltrazione perineurale chirurgica', 'Fentanil transdermico'],
+  source: 'PROSPECT laminectomia — Eur Spine J 2021 (revisione 2020)',
+};
+const PB_ROTATOR: ProspectBundle = {
+  title: 'Riparazione della cuffia dei rotatori',
+  rec: [
+    'Tecnica artroscopica quando possibile',
+    'Paracetamolo + FANS o COX-2 inibitore pre/intraop e postop',
+    'Prima scelta: blocco interscalenico (continuo o single-shot)',
+    'Alternativa: blocco del soprascapolare ± nervo ascellare',
+    'Desametasone EV',
+    'Oppioidi solo come rescue',
+  ],
+  notRec: [],
+  note: 'Bundle riferito alla riparazione della cuffia dei rotatori; per altre artroscopie di spalla manca un bundle PROSPECT specifico.',
+  source: 'PROSPECT cuffia dei rotatori — Toma et al., Anaesthesia 2019',
+};
+const PB_HIPFX: ProspectBundle = {
+  title: 'Frattura del femore prossimale',
+  rec: [
+    'Paracetamolo + FANS o COX-2 inibitore pre/intraop e postop (salvo controindicazioni)',
+    'Blocco femorale (anche 3-in-1) o fascia iliaca single-shot, secondo esperienza locale; catetere solo se attesa chirurgica prolungata',
+    'Anestesia spinale o generale scelta su criteri non legati al dolore',
+    'Oppioidi solo come rescue',
+  ],
+  notRec: ['PENG preoperatorio', 'Buprenorfina transdermica', 'LIA', 'Epidurale e adiuvanti epidurali', 'Dexmedetomidina e clonidina (EV o come adiuvanti)', 'TENS, crioterapia'],
+  note: 'Valido per la frattura di femore prossimale; per altre fratture dell\'arto inferiore manca un bundle PROSPECT specifico.',
+  source: 'PROSPECT frattura di femore — Pissens et al., Acta Anaesthesiol Belg 2024',
+};
+const PB_THORACOTOMY: ProspectBundle = {
+  title: 'Toracotomia',
+  rec: [
+    'Paracetamolo + FANS o COX-2 inibitore pre/intraop e postop',
+    'Prima scelta (equivalenti): epidurale toracica (AL + oppioide lipofilo, al livello dell\'incisione) oppure paravertebrale con catetere',
+    'Alternative se non fattibili: ESP, blocco romboide-intercostale o intercostale',
+    'Agopuntura o crioanalgesia se nessuna tecnica regionale è possibile',
+    'Oppioidi solo come rescue',
+  ],
+  notRec: ['Gabapentinoidi', 'Ketamina EV', 'Desametasone EV', 'Dexmedetomidina (EV o come adiuvante)', 'Magnesio', 'Blocco del serrato anteriore', 'Blocco del nervo frenico'],
+  source: 'PROSPECT toracotomia — Lemoine et al., Anaesthesia 2026 (doi 10.1111/anae.70123)',
+};
+const PB_BREAST: ProspectBundle = {
+  title: 'Chirurgia oncologica maggiore della mammella',
+  rec: [
+    'Paracetamolo + FANS o COX-2 inibitore pre/intraop e postop',
+    'Desametasone EV pre o intraoperatorio',
+    'Un blocco single-shot (considerati equivalenti): paravertebrale toracico, PECS (IPP/PSP), serrato anteriore superficiale o profondo, ESP, oppure LIA',
+    'LIA aggiuntiva solo per aree non coperte dal blocco, entro la dose massima di AL',
+    'Fisioterapia pre e postoperatoria',
+    'Oppioidi solo come rescue',
+  ],
+  notRec: ['Gabapentin', 'Duloxetina', 'Ketamina, lidocaina, magnesio, dexmedetomidina EV', 'Adiuvanti perineurali (desametasone, dexmedetomidina, ecc.)', 'Tecniche continue / cateteri di ferita'],
+  source: 'PROSPECT mammella oncologica — Desai et al., Anaesthesia 2026 (doi 10.1111/anae.70313)',
+};
+const PB_HERNIA: ProspectBundle = {
+  title: 'Ernioplastica inguinale aperta',
+  rec: [
+    'Paracetamolo + FANS o COX-2 inibitore pre/intraop e postop',
+    'Desametasone EV dose singola',
+    'Blocco ileoinguinale/ileoipogastrico o TAP e/o infiltrazione con AL',
+    'Field block come unica anestesia o in aggiunta all\'anestesia generale',
+    'Tecnica con rete',
+    'Oppioidi solo come rescue',
+  ],
+  notRec: ['Gabapentinoidi', 'Clonidina', 'Epidurale, paravertebrale', 'Lidocaina EV', 'TENS', 'Neurectomia, crioanalgesia'],
+  source: 'PROSPECT ernioplastica inguinale aperta (revisione 2019)',
+};
+// Chiavi web + iOS (il database è condiviso: una valutazione creata su una piattaforma va letta anche sull'altra)
+const PROSPECT_BUNDLES: Record<string, ProspectBundle> = {
+  protesi_anca: PB_THA, THA: PB_THA,
+  protesi_ginocchio: PB_TKA, TKA: PB_TKA,
+  spinale: PB_SPINE, VERTEBRALE_FUSIONE: PB_SPINE,
+  VERTEBRALE_DECOMPRESSIONE: PB_LAMINECTOMY,
+  ARTR_SPALLA: PB_ROTATOR,
+  FRATTURA_INF: PB_HIPFX, frattura_arto: PB_HIPFX,
+  toracotomia: PB_THORACOTOMY,
+  mammaria: PB_BREAST,
+  ernioplastica: PB_HERNIA,
 };
 
 // ─── NEUP-SIG 2025 ────────────────────────────────────────────────────────────
@@ -449,10 +515,10 @@ function initScores(n: number) { return new Array(n).fill(null) as (number | nul
 
 export default function CPSPScreen({ route, navigation }: any) {
   const { profile, refreshSession } = useAuth();
-  const { patientId, patientName } = route.params;
+  const { patientId, patientName, initialSection } = route.params;
 
   // Section
-  const [section, setSection] = useState<'valutazione' | 'followup_cpsp'>('valutazione');
+  const [section, setSection] = useState<'valutazione' | 'followup_cpsp'>(initialSection === 'followup_cpsp' ? 'followup_cpsp' : 'valutazione');
 
   // Valutazione form
   const [surgeryValue, setSurgeryValue] = useState<string>('');
@@ -890,8 +956,7 @@ export default function CPSPScreen({ route, navigation }: any) {
         anyPopulated = true;
       }
       // Regional anesthesia
-      const regionalAnesthesiaTypes = ['epidurale', 'locoregionale', 'spinale'];
-      const isRegionalType = regionalAnesthesiaTypes.includes(lastIntervention.anesthesia_type ?? '');
+      const isRegionalType = isRegionalAnesthesia(lastIntervention.anesthesia_type);
       const hasRegionalBlocks = lastIntervention.regional_blocks && String(lastIntervention.regional_blocks).trim() !== '';
       if (isRegionalType || hasRegionalBlocks) {
         setRegionalAnesthesia(true);
@@ -1078,6 +1143,7 @@ export default function CPSPScreen({ route, navigation }: any) {
     await supabase.from('cpsp_assessments').update({
       cpsp_risk_pct: updated.pct,
       cpsp_risk_level: updated.level,
+      engine_version: updated.version ?? null,
     }).eq('id', assessmentId);
     setPendingSaveId(null);
     Alert.alert('Punteggio aggiornato', `Rischio CPSP: ${updated.pct}% (${updated.level})`);
@@ -1086,7 +1152,7 @@ export default function CPSPScreen({ route, navigation }: any) {
     loadData();
   };
 
-  const handleSaveAssessment = async () => {
+  const handleSaveAssessment = async (withQr = false) => {
     setSaving(true);
     const pcsTotal = sumScores(pcsScores);
     const passTotal = sumScores(passScores);
@@ -1106,6 +1172,7 @@ export default function CPSPScreen({ route, navigation }: any) {
       csi_score: csiTotal,
       cpsp_risk_pct: result?.pct ?? null,
       cpsp_risk_level: result?.level ?? null,
+      engine_version: result?.version ?? null,
       // Screening Clinico Core
       pain_other_sites: painOtherSites,
       pain_other_sites_nrs: painOtherSites ? painOtherSitesNrs : null,
@@ -1136,6 +1203,13 @@ export default function CPSPScreen({ route, navigation }: any) {
       return;
     }
     const savedId: string = editingAssessmentId ?? (saveData as any)?.id;
+    if (withQr && savedId) {
+      resetAssessmentForm();
+      setShowAssessmentForm(false);
+      await loadData();
+      await handleGenerateQR(savedId);
+      return;
+    }
     if (result === null) {
       setPendingSaveId(savedId);
       Alert.alert(
@@ -1152,6 +1226,20 @@ export default function CPSPScreen({ route, navigation }: any) {
       setShowAssessmentForm(false);
       loadData();
     }
+  };
+
+  const importIntraopFromIntervention = async (a: any) => {
+    const { data: iv } = await supabase.from('interventions').select('*').eq('patient_id', patientId)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (!iv) { Alert.alert('Nessun intervento', 'Aggiungi prima l\'intervento nella scheda del paziente.'); return; }
+    const regional = isRegionalAnesthesia(iv.anesthesia_type) || !!(iv.regional_blocks && String(iv.regional_blocks).trim());
+    const { error } = await supabase.from('cpsp_assessments').update({
+      surgery_duration_minutes: iv.duration_minutes ?? a.surgery_duration_minutes ?? null,
+      regional_anesthesia: regional,
+      regional_anesthesia_type: regional ? (iv.regional_blocks ? String(iv.regional_blocks).trim() : (a.regional_anesthesia_type ?? null)) : null,
+    }).eq('id', a.id);
+    if (error) { Alert.alert('Errore', error.message); return; }
+    loadData();
   };
 
   const handleCalculatePod1 = (preopPct: number) => {
@@ -1811,7 +1899,7 @@ export default function CPSPScreen({ route, navigation }: any) {
                     </View>
                     <Text style={{ fontSize: 13, color: Colors.textMuted }}>{a.cpsp_risk_pct}%</Text>
                     <Text style={{ fontSize: 12, color: Colors.textMuted }}>
-                      PCS {a.pcs_score ?? '?'}/52 · PASS {a.pass_score ?? '?'}/80 · CSI {a.csi_score ?? '?'}/100
+                      PCS {a.pcs_score ?? '?'}/52 · PASS {a.pass_score ?? '?'}/100 · CSI {a.csi_score ?? '?'}/100
                     </Text>
                   </View>
 
@@ -1869,6 +1957,18 @@ export default function CPSPScreen({ route, navigation }: any) {
                       }
                     </TouchableOpacity>
                   )}
+
+                  {/* Dati intraoperatori CPSP: import esplicito dall'intervento (fase Ricovero) */}
+                  <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.background, borderRadius: 8, padding: 8 }}>
+                    <Text style={{ flex: 1, fontSize: 12, color: Colors.textMuted }}>
+                      🔧 Intraop: {a.surgery_duration_minutes != null || a.regional_anesthesia
+                        ? `${a.surgery_duration_minutes != null ? a.surgery_duration_minutes + ' min' : 'durata n.d.'} · ${a.regional_anesthesia ? 'Regionale' + (a.regional_anesthesia_type ? ': ' + a.regional_anesthesia_type : '') : 'No regionale'}`
+                        : 'non registrati'}
+                    </Text>
+                    <TouchableOpacity onPress={() => importIntraopFromIntervention(a)} style={{ backgroundColor: Colors.primaryLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.primary }}>⬇️ Importa dall'intervento</Text>
+                    </TouchableOpacity>
+                  </View>
 
                   {/* POD1 badge + button */}
                   {a.pod1_assessed_at ? (
@@ -2272,8 +2372,8 @@ export default function CPSPScreen({ route, navigation }: any) {
               </View>
             </View>
 
-            {/* ── Dati Intraoperatori ── */}
-            <View style={s.card}>
+            {/* ── Dati Intraoperatori ── (al T0 non servono: si importano dall'intervento nella fase Ricovero) */}
+            {!!editingAssessmentId && <View style={s.card}>
               <Text style={s.cardTitle}>🏥 Dati Intraoperatori</Text>
 
               {autoPopulatedFromIntervention && (
@@ -2321,7 +2421,7 @@ export default function CPSPScreen({ route, navigation }: any) {
                   </View>
                 </>
               )}
-            </View>
+            </View>}
 
             {/* ── Screening Clinico Core ── */}
             <View style={s.card}>
@@ -2434,12 +2534,31 @@ export default function CPSPScreen({ route, navigation }: any) {
               </View>
             </View>
 
+            {/* Il paziente compila da solo via QR */}
+            {!editingAssessmentId && (
+              <View style={{ backgroundColor: '#F5F3FF', borderWidth: 1.5, borderColor: '#C4B5FD', borderRadius: 12, padding: 14, marginBottom: 12 }}>
+                <Text style={{ fontWeight: '700', fontSize: 13, color: '#6D28D9', marginBottom: 4 }}>📱 Il paziente compila da solo?</Text>
+                <Text style={{ fontSize: 12, color: Colors.textMuted, marginBottom: 10, lineHeight: 17 }}>
+                  Salva la valutazione e genera il QR: il paziente compila PCS, PASS e CSI dal suo telefono e il rischio si aggiorna in automatico. Altrimenti compila qui sotto.
+                </Text>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#7C3AED', borderRadius: 10, paddingVertical: 12, alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+                  onPress={() => {
+                    if (!surgeryValue) { Alert.alert('Attenzione', 'Seleziona il tipo di intervento'); return; }
+                    handleSaveAssessment(true);
+                  }}
+                  disabled={saving}>
+                  {saving ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>💾 Salva e genera QR questionari</Text>}
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Scale tabs */}
             <View style={s.card}>
               <View style={s.scaleTabs}>
                 {([
                   { key: 'pcs' as const, label: 'PCS', answered: pcsAnswered, total: PCS_ITEMS.length, score: pcsTotal, max: 52 },
-                  { key: 'pass' as const, label: 'PASS', answered: passAnswered, total: PASS_ITEMS.length, score: passTotal, max: 80 },
+                  { key: 'pass' as const, label: 'PASS', answered: passAnswered, total: PASS_ITEMS.length, score: passTotal, max: 100 },
                   { key: 'csi' as const, label: 'CSI', answered: csiAnswered, total: CSI_ITEMS.length, score: csiTotal, max: 100 },
                 ]).map(t => (
                   <TouchableOpacity
@@ -2457,19 +2576,21 @@ export default function CPSPScreen({ route, navigation }: any) {
               {/* Scale description */}
               <Text style={s.scaleDesc}>
                 {scaleTab === 'pcs' && 'Scale di catastrofizzazione del dolore · 13 item · 0=Per niente  4=Sempre'}
-                {scaleTab === 'pass' && 'Ansia da dolore · 20 item · 0=Mai  4=Sempre'}
+                {scaleTab === 'pass' && 'Ansia da dolore · 20 item · 0=Mai  5=Sempre'}
                 {scaleTab === 'csi' && 'Sensitizzazione centrale · 25 item · 0=Mai  4=Sempre/Quasi sempre'}
               </Text>
 
               {/* Score legend */}
               <View style={s.legendRow}>
-                {[0,1,2,3,4].map(v => (
+                {(scaleTab === 'pass' ? [0,1,2,3,4,5] : [0,1,2,3,4]).map(v => (
                   <View key={v} style={s.legendItem}>
                     <View style={[s.legendBtn, { borderColor: Colors.primary }]}>
                       <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: '700' }}>{v}</Text>
                     </View>
                     <Text style={s.legendLabel}>
-                      {v === 0 ? 'Mai' : v === 1 ? 'Raramente' : v === 2 ? 'A volte' : v === 3 ? 'Spesso' : 'Sempre'}
+                      {scaleTab === 'pass'
+                        ? ['Mai', 'Quasi mai', 'Raramente', 'A volte', 'Spesso', 'Sempre'][v]
+                        : v === 0 ? 'Mai' : v === 1 ? 'Raramente' : v === 2 ? 'A volte' : v === 3 ? 'Spesso' : 'Sempre'}
                     </Text>
                   </View>
                 ))}
@@ -2485,7 +2606,7 @@ export default function CPSPScreen({ route, navigation }: any) {
                     <Text style={s.itemNum}>{idx + 1}</Text>
                     <Text style={s.itemText}>{item}</Text>
                     <View style={s.itemBtns}>
-                      {[0,1,2,3,4].map(v => (
+                      {(scaleTab === 'pass' ? [0,1,2,3,4,5] : [0,1,2,3,4]).map(v => (
                         <TouchableOpacity
                           key={v}
                           style={[s.itemBtn, val === v && s.itemBtnActive]}
@@ -2562,7 +2683,7 @@ export default function CPSPScreen({ route, navigation }: any) {
                           { label: 'Oppioidi preop', val: opioids === 'chronic' ? 'Cronico' : opioids === 'intermittent' ? 'Intermittente' : 'Nessuno' },
                           { label: 'NRS preop', val: `${nrsPreop ?? '–'}/10` },
                           { label: 'PCS', val: `${sumScores(pcsScores)}/52` },
-                          { label: `PASS${passRaw >= 30 ? ' ⚠️' : ''}`, val: `${passRaw}/80` },
+                          { label: `PASS${passRaw >= 30 ? ' ⚠️' : ''}`, val: `${passRaw}/100` },
                           { label: `CSI – ${csiSev}`, val: `${sumScores(csiScores)}/100` },
                         ].map(row => (
                           <View key={row.label} style={s.bdRow}>
@@ -2611,7 +2732,7 @@ export default function CPSPScreen({ route, navigation }: any) {
                         <Text style={s.disclaimerText}>
                           ⚠️ Strumento di supporto decisionale — non sostituisce la valutazione clinica individuale.{'\n\n'}
                           Nota metodologica: Formula composita ispirata a P4-Prevoque (PERISCOPE Trial 2025, AUC=0.81). Variabili predittive validate: tipo chirurgia (Kehlet 2006; Macrae 2008), uso oppioidi cronico preop (Chapman 2020), NRS preop (Kalkman 2003), fattori psicologici PCS/PASS/CSI (Sullivan 1995; McCracken 2002; Mayer 2012), distress termometro NCCN (cutoff ≥7), insonnia (Lancet Sleep 2023), sensibilizzazione centrale, dolore multifocale, fragilità. Aggiornamento dinamico T1: dolore acuto POD1 come predittore indipendente di CPSP (BJA 2023). Fenotipo neuropatico precoce a 2 sett.: bruciore/scosse/allodinia/freddo come indicatori precoci (Pain 2022). Pain Trajectory Score: composito NRS + fenotipo neuropatico + DN4 (scala 0–10).{'\n\n'}
-                          Scale validate: PCS (Sullivan 1995, PCS-I Monticone et al., cutoff ≥30/52); PASS-20 (McCracken 2002, cutoff ≥30/80); CSI (Mayer 2012, Neblett 2013, cutoff ≥40/100); DN4 (Bouhassira 2005, cutoff ≥4/7); BPI (Cleeland 1994); EQ-5D-5L (EuroQol 1990); FAS (Mitchell 2010). Follow-up strutturato (2 sett., 1, 3, 6, 12 mesi). Evidenze: PERISCOPE 2025, IASP 2021, BJA 2023-24, ROCKet 2024, APS 2016, PROSPECT 2023, Cochrane 2022-23, Pain 2022, NCCN 2023. Nota: duloxetina non raccomandata routinariamente in chirurgia ortopedica (evidenza negativa TKA/THA). Tutti i farmaci off-label per uso perioperatorio preventivo.
+                          Scale validate: PCS (Sullivan 1995, PCS-I Monticone et al., cutoff ≥30/52); PASS-20 (McCracken & Dhingra 2002, 0–5 × 20 item = 0–100; cutoff ≥30/100 esplorativo); CSI (Mayer 2012, Neblett 2013, cutoff ≥40/100); DN4 (Bouhassira 2005, cutoff ≥4/7); BPI (Cleeland 1994); EQ-5D-5L (EuroQol 1990); FAS (Scott & McDonald 2008). Follow-up strutturato (2 sett., 1, 3, 6, 12 mesi). Evidenze: PERISCOPE 2025, IASP 2021, BJA 2023-24, PROSPECT (ESRA) 2019–2026, Carley 2021, Doleman BJA 2023, SSAPM 2026, Pain 2022, NCCN 2023. Nota: gabapentinoidi e duloxetina non raccomandati di routine in perioperatorio (PROSPECT; Carley 2021). Tutti i farmaci off-label per uso perioperatorio preventivo.
                         </Text>
                       </View>
                     </View>
@@ -2628,7 +2749,7 @@ export default function CPSPScreen({ route, navigation }: any) {
             )}
             <TouchableOpacity
               style={[s.saveBtn, saving && { opacity: 0.6 }, { marginTop: 12 }]}
-              onPress={handleSaveAssessment}
+              onPress={() => handleSaveAssessment()}
               disabled={saving}>
               {saving
                 ? <ActivityIndicator color="#fff" />
@@ -2782,7 +2903,9 @@ export default function CPSPScreen({ route, navigation }: any) {
 
                 {/* FAS */}
                 <Text style={[s.fieldLabel, { marginTop: 12 }]}>⚡ FAS – Functional Activity Scale</Text>
-                <Text style={{ fontSize: 11, color: Colors.textMuted, marginBottom: 6 }}>A = nessuna · B = moderata · C = grave</Text>
+                <Text style={{ fontSize: 11, color: Colors.textMuted, marginBottom: 6, lineHeight: 16 }}>
+                  {fpFas ? `FAS ${fpFas} · ${FAS_DESC[fpFas]}` : 'Capacità di eseguire l\'attività (es. camminare, tossire): A nessuna limitazione · B lieve · C significativa'}
+                </Text>
                 <View style={s.chipRow}>
                   {(['A', 'B', 'C'] as const).map(grade => {
                     const gc = grade === 'A' ? Colors.green : grade === 'B' ? Colors.yellow : Colors.red;
@@ -3210,36 +3333,30 @@ function RecCard({ rec }: { rec: Rec }) {
 
 // ─── PROSPECT BUNDLE CARD ────────────────────────────────────────────────────
 
-function ProspectBundleCard({ bundle }: { bundle: typeof PROSPECT_BUNDLES[string] }) {
+function ProspectBundleCard({ bundle }: { bundle: ProspectBundle }) {
   return (
     <View style={{ backgroundColor: '#E0F2F1', borderRadius: 10, padding: 12, marginBottom: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
         <Text style={{ fontSize: 15 }}>🎯</Text>
         <Text style={{ fontSize: 13, fontWeight: '700', color: '#004D40', flex: 1 }}>
-          PROSPECT Bundle: {bundle.title}
+          Bundle PROSPECT · {bundle.title}
         </Text>
       </View>
-      <Text style={{ fontSize: 11, color: '#00695C', marginBottom: 8, fontStyle: 'italic' }}>
-        📚 {bundle.source}
-      </Text>
-      {bundle.items.map((item, i) => (
-        <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 5,
-          borderBottomWidth: i < bundle.items.length - 1 ? 1 : 0,
-          borderBottomColor: '#B2DFDB', gap: 8 }}>
-          <View style={{ backgroundColor: LEVEL_COLOR[item.level] ?? '#9E9E9E',
-            paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, marginTop: 2 }}>
-            <Text style={{ fontSize: 10, fontWeight: '700', color: '#fff' }}>
-              {item.level === 'expert' ? 'Exp' : item.level}
-            </Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 13, color: '#004D40', fontWeight: '600' }}>{item.drug}</Text>
-            {item.dose !== '' && (
-              <Text style={{ fontSize: 11, color: '#00796B' }}>{item.dose}</Text>
-            )}
-          </View>
+      {bundle.rec.map((item, i) => (
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 4, gap: 6 }}>
+          <Text style={{ fontSize: 12, color: '#00796B', fontWeight: '700' }}>✓</Text>
+          <Text style={{ flex: 1, fontSize: 12.5, color: '#004D40', lineHeight: 18 }}>{item}</Text>
         </View>
       ))}
+      {bundle.notRec.length > 0 && (
+        <Text style={{ fontSize: 11.5, color: '#991B1B', marginTop: 6, lineHeight: 17 }}>
+          <Text style={{ fontWeight: '700' }}>Non raccomandati: </Text>{bundle.notRec.join(' · ')}
+        </Text>
+      )}
+      {!!bundle.note && (
+        <Text style={{ fontSize: 11.5, color: '#92400E', marginTop: 6, lineHeight: 17 }}>ℹ️ {bundle.note}</Text>
+      )}
+      <Text style={{ fontSize: 10.5, color: '#00695C', marginTop: 8, fontStyle: 'italic' }}>📚 {bundle.source}</Text>
     </View>
   );
 }

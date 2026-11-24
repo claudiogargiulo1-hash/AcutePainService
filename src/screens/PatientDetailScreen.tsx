@@ -1,5 +1,5 @@
 // src/screens/PatientDetailScreen.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   SafeAreaView, ActivityIndicator, Alert, Dimensions, FlatList, TextInput,
@@ -41,7 +41,10 @@ export default function PatientDetailScreen({ route, navigation }: any) {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [measurements, setMeasurements] = useState<NrsMeasurement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'info' | 'nrs' | 'interventions' | 'audit'>('nrs');
+  const [activeTab, setActiveTab] = useState<'pre' | 'ric' | 'post' | 'audit' | ''>('');
+  const [latestRisk, setLatestRisk] = useState<{ cpsp_risk_pct: number | null; cpsp_risk_level: string | null } | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
+  const lastStatusRef = useRef<string | null>(null);
 
   const [tenantId, setTenantId] = useState<string | null>(null);
 
@@ -60,12 +63,20 @@ export default function PatientDetailScreen({ route, navigation }: any) {
 
   const fetchAll = async () => {
     refreshSession?.();
-    const [pRes, iRes, mRes] = await Promise.all([
+    const [pRes, iRes, mRes, rRes] = await Promise.all([
       supabase.from('patients').select('*').eq('id', patientId).single(),
       supabase.from('interventions').select('*').eq('patient_id', patientId).order('created_at', { ascending: false }),
       supabase.from('nrs_measurements').select('*').eq('patient_id', patientId).order('measured_at', { ascending: false }).limit(48),
+      supabase.from('cpsp_assessments').select('cpsp_risk_pct, cpsp_risk_level').eq('patient_id', patientId).order('created_at', { ascending: false }).limit(1),
     ]);
     setPatient(pRes.data);
+    setLatestRisk((rRes.data && rRes.data[0]) || null);
+    // Apre la fase in corso; la cambia solo se cambia lo stato del paziente
+    const st = (pRes.data as any)?.patient_status || 'ricoverato';
+    if (lastStatusRef.current !== st) {
+      lastStatusRef.current = st;
+      setActiveTab(st === 'pre_ricovero' ? 'pre' : st === 'ricoverato' ? 'ric' : 'post');
+    }
     setInterventions(iRes.data || []);
     setMeasurements(mRes.data || []);
     setLoading(false);
@@ -293,6 +304,9 @@ export default function PatientDetailScreen({ route, navigation }: any) {
             ] : []),
             ...(canDeletePatient ? [
               { key: 'edit',   emoji: '✏️', label: 'Edit',    bg: '#EFF6FF', fg: '#1D4ED8',  onPress: () => navigation.navigate('AddPatient', { patientId }) },
+              ...((patient as any)?.patient_status === 'pre_ricovero' ? [
+                { key: 'adm',  emoji: '🏥', label: 'Ricovera', bg: '#EFF6FF', fg: '#3B82F6', onPress: handleAdmit },
+              ] : []),
               ...(!patient?.patient_status || patient?.patient_status === 'ricoverato' ? [
                 { key: 'dim',  emoji: '🏠', label: 'Dimetti', bg: '#FEF3C7', fg: '#92400E',  onPress: handleDismiss },
               ] : []),
@@ -317,24 +331,122 @@ export default function PatientDetailScreen({ route, navigation }: any) {
         })()}
       </View>
 
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        {(profile?.role === 'admin' ? (['nrs', 'info', 'interventions', 'audit'] as const) : (['nrs', 'info', 'interventions'] as const)).map(tab => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tab, activeTab === tab && styles.tabActive]}
-            onPress={() => setActiveTab(tab)}>
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab === 'nrs' ? '📊 NRS' : tab === 'info' ? '👤 Info' : tab === 'interventions' ? '🔧 Interventi' : '📜 Cronologia'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Sintesi paziente — sempre visibile */}
+      {(() => {
+        const last = measurements[0];
+        const age = patient.date_of_birth ? Math.floor((Date.now() - new Date(patient.date_of_birth).getTime()) / 31557600000) : null;
+        const lvl = latestRisk?.cpsp_risk_level || '';
+        const riskColor = lvl === 'molto_alto' || lvl === 'alto' ? Colors.red : lvl === 'moderato' ? Colors.yellow : lvl ? Colors.green : Colors.text;
+        const riskLabel: Record<string, string> = { basso: 'Basso', moderato: 'Moderato', alto: 'Alto', molto_alto: 'Molto alto' };
+        const chips: Array<[string, string, string?]> = [
+          ['Età', age != null ? `${age} anni${patient.gender ? ' · ' + patient.gender : ''}` : '—'],
+          ['ASA', patient.asa_class ? String(patient.asa_class) : '—'],
+          ['Allergie', patient.allergies || 'Nessuna', patient.allergies ? Colors.red : undefined],
+          ['Ultimo NRS', last ? `${last.nrs_value}${(last as any).nrs_movement != null ? ' / ' + (last as any).nrs_movement + ' mov' : ''} · ${format(parseISO(last.measured_at), 'dd/MM HH:mm')}` : '—', last ? getNrsColor(last.nrs_value) : undefined],
+          ['Rischio CPSP', latestRisk?.cpsp_risk_pct != null ? `${latestRisk.cpsp_risk_pct}% · ${riskLabel[lvl] || ''}` : 'Non valutato', latestRisk?.cpsp_risk_pct != null ? riskColor : undefined],
+        ];
+        return (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: Spacing.md, paddingTop: 10 }}>
+            {chips.map(([label, value, color]) => (
+              <View key={label} style={{ width: '48.5%', backgroundColor: Colors.surface, borderRadius: 10, paddingVertical: 7, paddingHorizontal: 10, ...Shadow.sm }}>
+                <Text style={{ fontSize: 10, color: Colors.textMuted, fontWeight: '700', textTransform: 'uppercase' }}>{label}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: color || Colors.text, marginTop: 2 }} numberOfLines={2}>{value}</Text>
+              </View>
+            ))}
+          </View>
+        );
+      })()}
+
+      {/* Fasi del percorso */}
+      {(() => {
+        const st = (patient as any)?.patient_status || 'ricoverato';
+        const current = st === 'pre_ricovero' ? 'pre' : st === 'ricoverato' ? 'ric' : 'post';
+        const steps: Array<['pre' | 'ric' | 'post', string, string]> = [['pre', '1', 'Preop'], ['ric', '2', 'Ricovero'], ['post', '3', 'Post-dim.']];
+        return (
+          <View style={{ flexDirection: 'row', gap: 6, paddingHorizontal: Spacing.md, paddingVertical: 10 }}>
+            {steps.map(([key, n, label]) => {
+              const active = activeTab === key;
+              return (
+                <TouchableOpacity key={key} onPress={() => setActiveTab(key)}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 8, borderRadius: 12,
+                    borderWidth: 2, borderColor: active ? Colors.primary : 'transparent', backgroundColor: active ? Colors.primaryLight : Colors.surface }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: active ? Colors.primary : Colors.background }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: active ? '#fff' : Colors.textMuted }}>{n}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: active ? Colors.primary : Colors.text }} numberOfLines={1}>{label}</Text>
+                    {current === key && <Text style={{ fontSize: 9, fontWeight: '700', color: Colors.green }}>● in corso</Text>}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+            {profile?.role === 'admin' && (
+              <TouchableOpacity onPress={() => setActiveTab('audit')}
+                style={{ width: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 2,
+                  borderColor: activeTab === 'audit' ? Colors.primary : 'transparent', backgroundColor: activeTab === 'audit' ? Colors.primaryLight : Colors.surface }}>
+                <Text style={{ fontSize: 15 }}>📜</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+      })()}
 
       <ScrollView contentContainerStyle={styles.scroll}>
 
-        {activeTab === 'nrs' && (
+        {/* ── FASE 1 · PREOPERATORIO ── */}
+        {activeTab === 'pre' && (
           <>
+            <TouchableOpacity style={styles.card} onPress={() => setShowInfo(v => !v)} activeOpacity={0.8}>
+              <Text style={[styles.cardTitle, { marginBottom: showInfo ? Spacing.sm : 0 }]}>{showInfo ? '▾' : '▸'} 👤 Dati paziente completi</Text>
+              {showInfo && (<>
+            <InfoRow label="Nome" value={`${patient.first_name} ${patient.last_name}`} />
+            <InfoRow label="Data di nascita" value={patient.date_of_birth} />
+            <InfoRow label="Codice Fiscale" value={patient.fiscal_code || '-'} />
+            <InfoRow label="Sesso" value={patient.gender || '-'} />
+            <InfoRow label="N° Ricovero" value={patient.admission_number} />
+            <InfoRow label="Reparto" value={patient.ward} />
+            <InfoRow label="Letto" value={patient.bed || '-'} />
+            <InfoRow label="Data ricovero" value={patient.admission_date} />
+            <InfoRow label="Peso" value={patient.weight_kg ? `${patient.weight_kg} kg` : '-'} />
+            <InfoRow label="Altezza" value={patient.height_cm ? `${patient.height_cm} cm` : '-'} />
+            <InfoRow label="Classe ASA" value={patient.asa_class ? `ASA ${patient.asa_class}` : '-'} />
+            {patient.allergies && <InfoRow label="Allergie ⚠️" value={patient.allergies} highlight />}
+            {patient.notes && <InfoRow label="Note" value={patient.notes} />}
+          </>)}
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.card, { borderLeftWidth: 3, borderLeftColor: '#7C3AED' }]}
+              onPress={() => navigation.navigate('CPSP', { patientId, patientName: patient.last_name + ' ' + patient.first_name, initialSection: 'valutazione' })}>
+              <Text style={styles.cardTitle}>🧠 Valutazione preoperatoria CPSP</Text>
+              <Text style={{ fontSize: 13, color: Colors.textMuted, lineHeight: 19 }}>
+                Dati base e screening, poi "Salva e genera QR": il paziente compila PCS, PASS e CSI dal suo telefono.
+              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#7C3AED', marginTop: 8 }}>Apri valutazione →</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {/* ── FASE 2 · RICOVERO ── */}
+        {activeTab === 'ric' && (
+          <>
+            <Text style={styles.phaseLabel}>INTERVENTO</Text>
+{(profile?.role === 'medico' || profile?.role === 'admin') && (
+              <TouchableOpacity
+                style={styles.addBtn}
+                onPress={() => navigation.navigate('AddIntervention', { patientId })}>
+                <Text style={styles.addBtnText}>+ {t('add_intervention')}</Text>
+              </TouchableOpacity>
+            )}
+            {interventions.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>🔧</Text>
+                <Text style={styles.empty}>Nessun intervento registrato</Text>
+              </View>
+            ) : (
+              interventions.map(i => <InterventionCard key={i.id} intervention={i} t={t} canDelete={canDeleteIntervention} onDelete={deleteIntervention} navigation={navigation} patientId={patientId} />)
+            )}
+          
+            <Text style={styles.phaseLabel}>DOLORE IN REPARTO · NRS</Text>
+
             {/* NRS Chart */}
             {hasChart && (
               <View style={styles.card}>
@@ -379,30 +491,19 @@ export default function PatientDetailScreen({ route, navigation }: any) {
                 measurements.map(m => <MeasurementRow key={m.id} m={m} t={t} canDelete={canDeleteNRS} onDelete={deleteNRS} navigation={navigation} patientId={patientId} />)
               )}
             </View>
-          </>
-        )}
-
-        {activeTab === 'info' && (
-          <View style={styles.card}>
-            <InfoRow label="Nome" value={`${patient.first_name} ${patient.last_name}`} />
-            <InfoRow label="Data di nascita" value={patient.date_of_birth} />
-            <InfoRow label="Codice Fiscale" value={patient.fiscal_code || '-'} />
-            <InfoRow label="Sesso" value={patient.gender || '-'} />
-            <InfoRow label="N° Ricovero" value={patient.admission_number} />
-            <InfoRow label="Reparto" value={patient.ward} />
-            <InfoRow label="Letto" value={patient.bed || '-'} />
-            <InfoRow label="Data ricovero" value={patient.admission_date} />
-            <InfoRow label="Peso" value={patient.weight_kg ? `${patient.weight_kg} kg` : '-'} />
-            <InfoRow label="Altezza" value={patient.height_cm ? `${patient.height_cm} cm` : '-'} />
-            <InfoRow label="Classe ASA" value={patient.asa_class ? `ASA ${patient.asa_class}` : '-'} />
-            {patient.allergies && <InfoRow label="Allergie ⚠️" value={patient.allergies} highlight />}
-            {patient.notes && <InfoRow label="Note" value={patient.notes} />}
-          </View>
-        )}
-
-        {activeTab === 'interventions' && (
-          <>
-            {/* Piano Dimissione Oppioidi */}
+          
+            <Text style={styles.phaseLabel}>OPPIOIDI E RISCHIO</Text>
+            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('Opioid', { patientId, patientName: patient.last_name + ' ' + patient.first_name, interventionId: interventions[0]?.id })}>
+              <Text style={styles.cardTitle}>💊 Terapia oppioide (MEO)</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.primary }}>Apri →</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('CPSP', { patientId, patientName: patient.last_name + ' ' + patient.first_name, initialSection: 'valutazione' })}>
+              <Text style={styles.cardTitle}>🔧 Dati intraoperatori e rischio T1 (POD1)</Text>
+              <Text style={{ fontSize: 13, color: Colors.textMuted, lineHeight: 19 }}>Nella valutazione CPSP: "Importa dall'intervento" e aggiornamento del rischio a POD1.</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.primary, marginTop: 8 }}>Apri →</Text>
+            </TouchableOpacity>
+            <Text style={styles.phaseLabel}>DIMISSIONE</Text>
+{/* Piano Dimissione Oppioidi */}
             <View style={[styles.card, { borderLeftWidth: 3, borderLeftColor: Colors.primary }]}>
               <Text style={styles.cardTitle}>💊 Piano Dimissione Oppioidi</Text>
 
@@ -546,21 +647,26 @@ export default function PatientDetailScreen({ route, navigation }: any) {
               )}
             </View>
 
-            {(profile?.role === 'medico' || profile?.role === 'admin') && (
-              <TouchableOpacity
-                style={styles.addBtn}
-                onPress={() => navigation.navigate('AddIntervention', { patientId })}>
-                <Text style={styles.addBtnText}>+ {t('add_intervention')}</Text>
-              </TouchableOpacity>
-            )}
-            {interventions.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyIcon}>🔧</Text>
-                <Text style={styles.empty}>Nessun intervento registrato</Text>
-              </View>
-            ) : (
-              interventions.map(i => <InterventionCard key={i.id} intervention={i} t={t} canDelete={canDeleteIntervention} onDelete={deleteIntervention} navigation={navigation} patientId={patientId} />)
-            )}
+            
+          </>
+        )}
+
+        {/* ── FASE 3 · POST-DIMISSIONE ── */}
+        {activeTab === 'post' && (
+          <>
+            <TouchableOpacity style={styles.card} onPress={handleNrsHomeQR}>
+              <Text style={styles.cardTitle}>📱 NRS a domicilio (POD1→7)</Text>
+              <Text style={{ fontSize: 13, color: Colors.textMuted, lineHeight: 19 }}>Mostra il QR per il monitoraggio NRS da casa.</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('CPSP', { patientId, patientName: patient.last_name + ' ' + patient.first_name, initialSection: 'valutazione' })}>
+              <Text style={styles.cardTitle}>📈 Traiettoria del rischio e prima settimana</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.primary }}>Apri →</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.card, { borderLeftWidth: 3, borderLeftColor: '#7C3AED' }]} onPress={() => navigation.navigate('CPSP', { patientId, patientName: patient.last_name + ' ' + patient.first_name, initialSection: 'followup_cpsp' })}>
+              <Text style={styles.cardTitle}>📅 Follow-up CPSP</Text>
+              <Text style={{ fontSize: 13, color: Colors.textMuted, lineHeight: 19 }}>2 settimane, 1, 3, 6 e 12 mesi — NRS, FAS, BPI, DN4, algoritmo ICD-11.</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#7C3AED', marginTop: 8 }}>Apri follow-up →</Text>
+            </TouchableOpacity>
           </>
         )}
 
@@ -730,6 +836,7 @@ const styles = StyleSheet.create({
   actionBtn: { width: 64, height: 64, borderRadius: 14, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
   actionBtnEmoji: { fontSize: 22, lineHeight: 26 },
   actionBtnLabel: { fontSize: 9, fontWeight: '700', marginTop: 2 },
+  phaseLabel: { fontSize: 11, fontWeight: '800', color: Colors.textMuted, letterSpacing: 0.8, marginTop: 4, marginBottom: 6 },
   tabs: { flexDirection: 'row', backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.border },
   tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
   tabActive: { borderBottomWidth: 2, borderBottomColor: Colors.primary },

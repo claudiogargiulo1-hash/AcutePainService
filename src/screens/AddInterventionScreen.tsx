@@ -101,7 +101,7 @@ export default function AddInterventionScreen({ route, navigation }: any) {
   const [form, setForm] = useState({
     intervention_name: '', intervention_subtype: '', category: 'ortopedico',
     surgeon: '', anesthesiologist_name: '', nrs_alert_threshold: '6',
-    intervention_end_time: getNow(), notes: '',
+    intervention_end_time: getNow(), duration_minutes: '', notes: '',
   });
   const setF = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
@@ -177,6 +177,7 @@ export default function AddInterventionScreen({ route, navigation }: any) {
       anesthesiologist_name: d.anesthesiologist_name ?? '',
       nrs_alert_threshold:   d.nrs_alert_threshold?.toString() ?? '6',
       intervention_end_time: d.intervention_end_time ? d.intervention_end_time.slice(0,16).replace('T',' ') : getNow(),
+      duration_minutes:      d.duration_minutes != null ? String(d.duration_minutes) : '',
       notes:                 d.notes ?? '',
     });
     // structured anesthesia
@@ -237,6 +238,7 @@ export default function AddInterventionScreen({ route, navigation }: any) {
       anesthesiologist_name: form.anesthesiologist_name || null,
       nrs_alert_threshold:   parseInt(form.nrs_alert_threshold) || 6,
       intervention_end_time: form.intervention_end_time ? new Date(form.intervention_end_time).toISOString() : null,
+      duration_minutes:      form.duration_minutes ? (parseInt(form.duration_minutes) || null) : null,
       notes:                 form.notes || null,
       // anesthesia
       anesthesia_type:      anesDetails.types.length > 0 ? anesDetails.types.join(',') : null,
@@ -883,6 +885,11 @@ export default function AddInterventionScreen({ route, navigation }: any) {
           <TextInput style={s.input} value={form.intervention_end_time} onChangeText={v => setF('intervention_end_time', v)}
             placeholder="2026-03-01 14:30" placeholderTextColor={Colors.textLight} keyboardType="numbers-and-punctuation" />
           <Text style={s.fieldNote}>Inserendo l'orario verranno programmate rilevazioni NRS a 6, 12, 24 e 48 ore</Text>
+        </Field>
+        <Field label="Durata intervento (min)">
+          <TextInput style={s.input} value={form.duration_minutes} onChangeText={v => setF('duration_minutes', v)}
+            keyboardType="numeric" placeholder="es. 90" placeholderTextColor={Colors.textLight} />
+          <Text style={s.fieldNote}>Usata nei dati intraoperatori CPSP</Text>
         </Field>
         <Field label="Note">
           <TextInput style={[s.input, s.textarea]} value={form.notes} onChangeText={v => setF('notes', v)}
