@@ -1043,7 +1043,9 @@ export default function CPSPScreen({ route, navigation }: any) {
     bpi[5] = fp.bpi_mood ?? null;
     bpi[6] = fp.bpi_work ?? null;
     setFpBpi(bpi);
-    setFpDn4(Array.isArray(fp.dn4_answers) ? fp.dn4_answers : new Array(DN4_ITEMS.length).fill(null));
+    setFpDn4(Array.isArray(fp.dn4_answers)
+      ? fp.dn4_answers.map((v: any) => (v === 1 || v === true ? true : v === 0 || v === false ? false : null))
+      : new Array(DN4_ITEMS.length).fill(null));
     setFpEq5d([fp.eq5d_mobility ?? null, fp.eq5d_self_care ?? null, fp.eq5d_usual_activities ?? null, fp.eq5d_pain ?? null, fp.eq5d_anxiety ?? null]);
     setFpEqVas(fp.eq5d_vas ?? null);
     setFpTherapy(fp.current_therapy ?? '');
@@ -1386,7 +1388,8 @@ export default function CPSPScreen({ route, navigation }: any) {
       fu_opioid_ome:                    fpOpioidOmePostop.trim() !== '' ? parseFloat(fpOpioidOmePostop) || null : null,
       opioid_ome_followup:              fpOpioidOmePostop.trim() !== '' ? parseFloat(fpOpioidOmePostop) || null : null,
       // ── Other valid fields ───────────────────────────────────────────────
-      dn4_answers:                      fpDn4,
+      // DB column is integer[]: 1 = sì, 0 = no, null = non risposto
+      dn4_answers:                      fpDn4.map(v => (v === true ? 1 : v === false ? 0 : null)),
       current_therapy:                  fpTherapy || null,
       fas_score:                        fpFas ?? null,
       neup_sig_drug:                    neupsigDocDrug || null,
