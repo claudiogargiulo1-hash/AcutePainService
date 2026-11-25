@@ -66,12 +66,12 @@ export default function PatientsScreen({ navigation }: any) {
   const tabPatients = allPatients.filter(p => p._tab === activeTab);
   const filtered = search.trim()
     ? tabPatients.filter((p: any) => {
-        const q = search.toLowerCase();
+        const q = search.trim().toLowerCase();
         return (
-          p.last_name.toLowerCase().includes(q) ||
-          p.first_name.toLowerCase().includes(q) ||
-          p.admission_number.toLowerCase().includes(q) ||
-          p.ward.toLowerCase().includes(q)
+          (p.last_name ?? '').toLowerCase().includes(q) ||
+          (p.first_name ?? '').toLowerCase().includes(q) ||
+          (p.admission_number ?? '').toLowerCase().includes(q) ||
+          (p.ward ?? '').toLowerCase().includes(q)
         );
       })
     : tabPatients;
