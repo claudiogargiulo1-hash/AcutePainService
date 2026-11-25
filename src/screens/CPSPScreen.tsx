@@ -1,5 +1,5 @@
 // src/screens/CPSPScreen.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   SafeAreaView, Alert, ActivityIndicator, TextInput, Modal, Pressable,
@@ -642,13 +642,6 @@ export default function CPSPScreen({ route, navigation }: any) {
 
   // QR Modal
   const [qrModal, setQrModal] = useState(false);
-  const mainScrollRef = useRef<ScrollView>(null);
-  useEffect(() => {
-    if (qrModal) {
-      setSection('valutazione');
-      setTimeout(() => mainScrollRef.current?.scrollTo({ y: 0, animated: true }), 50);
-    }
-  }, [qrModal]);
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [qrStatus, setQrStatus] = useState<'pending' | 'completed' | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
@@ -1485,6 +1478,75 @@ export default function CPSPScreen({ route, navigation }: any) {
   return (
     <SafeAreaView style={s.container}>
 
+      {/* ── QR Modal ── */}
+      <Modal
+        visible={qrModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setQrModal(false)}>
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 24 }}
+          onPress={() => setQrModal(false)}>
+          <Pressable
+            style={{ backgroundColor: Colors.surface, borderRadius: 20, padding: 24, width: '100%', maxWidth: 360, alignItems: 'center' }}
+            onPress={() => {}}>
+
+            {/* Status banner */}
+            {qrStatus === 'completed' ? (
+              <View style={{ backgroundColor: Colors.greenLight, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 16, marginBottom: 16, alignSelf: 'stretch', alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.green }}>
+                  ✅ Questionario completato dal paziente
+                </Text>
+              </View>
+            ) : (
+              <View style={{ backgroundColor: Colors.yellowLight, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 16, marginBottom: 16, alignSelf: 'stretch', alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.yellow }}>
+                  ⏳ In attesa di compilazione
+                </Text>
+              </View>
+            )}
+
+            <Text style={{ fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 16, textAlign: 'center' }}>
+              📱 Questionario Paziente
+            </Text>
+
+            {/* QR Code */}
+            {qrUrl !== '' && (
+              <View style={{ padding: 12, backgroundColor: '#fff', borderRadius: 12, marginBottom: 16, ...Shadow.sm }}>
+                <QRCode value={qrUrl} size={200} />
+              </View>
+            )}
+
+            {/* Link copiabile */}
+            <TouchableOpacity
+              style={{ backgroundColor: Colors.primaryLight, borderRadius: 10, paddingVertical: 10,
+                paddingHorizontal: 14, alignSelf: 'stretch', marginBottom: 8 }}
+              onPress={async () => {
+                await Clipboard.setStringAsync(qrUrl);
+                Alert.alert('✅ Copiato', 'Link copiato negli appunti');
+              }}>
+              <Text style={{ fontSize: 11, color: Colors.primary, textAlign: 'center', fontFamily: 'monospace' }}
+                numberOfLines={2}>
+                {qrUrl}
+              </Text>
+              <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: '700', textAlign: 'center', marginTop: 4 }}>
+                📋 Tocca per copiare il link
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={{ fontSize: 12, color: Colors.textMuted, marginBottom: 16, textAlign: 'center' }}>
+              🕐 Valido 7 giorni · Scales: PCS · PASS · CSI
+            </Text>
+
+            <TouchableOpacity
+              style={{ backgroundColor: Colors.primary, borderRadius: 10, paddingVertical: 12,
+                alignSelf: 'stretch', alignItems: 'center' }}
+              onPress={() => setQrModal(false)}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Chiudi</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── POD1 Dynamic Update Modal ── */}
       {assessments.map(a => {
@@ -1791,70 +1853,11 @@ export default function CPSPScreen({ route, navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView ref={mainScrollRef} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
 
         {/* ══════════════════ VALUTAZIONE ══════════════════ */}
         {section === 'valutazione' && (
           <>
-            {/* ── QR questionari (in pagina, non popup: su iOS il popup non si apriva dopo il salvataggio) ── */}
-            {qrModal && qrUrl !== '' && (
-              <View style={{ backgroundColor: Colors.surface, borderRadius: 16, padding: 20, marginBottom: 12, alignItems: 'center', borderWidth: 2, borderColor: '#C4B5FD', ...Shadow.sm }}>
-
-              {/* Status banner */}
-              {qrStatus === 'completed' ? (
-                <View style={{ backgroundColor: Colors.greenLight, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 16, marginBottom: 16, alignSelf: 'stretch', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.green }}>
-                    ✅ Questionario completato dal paziente
-                  </Text>
-                </View>
-              ) : (
-                <View style={{ backgroundColor: Colors.yellowLight, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 16, marginBottom: 16, alignSelf: 'stretch', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.yellow }}>
-                    ⏳ In attesa di compilazione
-                  </Text>
-                </View>
-              )}
-
-              <Text style={{ fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 16, textAlign: 'center' }}>
-                📱 Questionario Paziente
-              </Text>
-
-              {/* QR Code */}
-              {qrUrl !== '' && (
-                <View style={{ padding: 12, backgroundColor: '#fff', borderRadius: 12, marginBottom: 16, ...Shadow.sm }}>
-                  <QRCode value={qrUrl} size={200} />
-                </View>
-              )}
-
-              {/* Link copiabile */}
-              <TouchableOpacity
-                style={{ backgroundColor: Colors.primaryLight, borderRadius: 10, paddingVertical: 10,
-                  paddingHorizontal: 14, alignSelf: 'stretch', marginBottom: 8 }}
-                onPress={async () => {
-                  await Clipboard.setStringAsync(qrUrl);
-                  Alert.alert('✅ Copiato', 'Link copiato negli appunti');
-                }}>
-                <Text style={{ fontSize: 11, color: Colors.primary, textAlign: 'center', fontFamily: 'monospace' }}
-                  numberOfLines={2}>
-                  {qrUrl}
-                </Text>
-                <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: '700', textAlign: 'center', marginTop: 4 }}>
-                  📋 Tocca per copiare il link
-                </Text>
-              </TouchableOpacity>
-
-              <Text style={{ fontSize: 12, color: Colors.textMuted, marginBottom: 16, textAlign: 'center' }}>
-                🕐 Valido 7 giorni · Scales: PCS · PASS · CSI
-              </Text>
-
-              <TouchableOpacity
-                style={{ backgroundColor: Colors.primary, borderRadius: 10, paddingVertical: 12,
-                  alignSelf: 'stretch', alignItems: 'center' }}
-                onPress={() => setQrModal(false)}>
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Chiudi</Text>
-              </TouchableOpacity>
-              </View>
-            )}
             {/* ── Lista valutazioni salvate ── */}
             {assessments.map((a, idx) => {
               const rc = RISK_CONFIG[a.cpsp_risk_level as keyof typeof RISK_CONFIG] ?? RISK_CONFIG.basso;
